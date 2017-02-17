@@ -31,5 +31,16 @@ public class SongUtils {
 		}
 		return -1;
 	}
+	
+	public static Song getNextUnplayedSong(List<Song> songList) {
+		Song rval = null;
+		for (Song song : songList) {
+			if (!song.isSelected()) {
+				rval = song;
+				break;
+			}
+		}
+		return rval;
+	}
 
 }

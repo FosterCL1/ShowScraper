@@ -2,6 +2,7 @@ package shows;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 
 import scraper.GetSongListOfShow;
@@ -12,6 +13,7 @@ public class Show implements Comparable<Show> {
 	private Date date;
 	private List<Song> songs;
 	private String url;
+	private int selected = 0;
 	
 	public Show(String link) {
 		url = link.split("\\?")[0];
@@ -36,6 +38,13 @@ public class Show implements Comparable<Show> {
 		}
 	}
 	
+	public void addSong(Song song) {
+		if (songs == null) {
+			songs = new LinkedList<Song>();
+		}
+		songs.add(song);
+	}
+	
 	public void populateSongList() {
 		songs = GetSongListOfShow.getSongListOfShow(this);
 	}
@@ -43,5 +52,44 @@ public class Show implements Comparable<Show> {
 	public List<Song> getSongList() {
 		return songs;
 	}
+	
+	public int select() {
+		int numSongsSelected = 0;
+		for (Song song : songs) {
+			if (song.select()) {
+				numSongsSelected++;
+			}
+		}
+		selected++;
+		return numSongsSelected;
+	}
 
+	public int unselect() {
+		int numSongsUnselected = 0;
+		for (Song song : songs) {
+			if (song.unselect()) {
+				numSongsUnselected++;
+			}
+		}
+		if (selected > 0) {
+			selected--;
+		}
+		
+		return numSongsUnselected;
+	}
+	
+	public double getShowWeight() {
+		double rval = 0;
+		for (Song song : songs) {
+			if (!song.isSelected()) {
+				// TODO: This should look into the absolute size of the song selections and adjust the weight accordingly
+				rval += 1;
+			}
+		}
+		return rval;
+	}
+	
+	public boolean isSelected() {
+		return (selected > 0);
+	}
 }

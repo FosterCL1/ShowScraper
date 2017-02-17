@@ -1,29 +1,38 @@
 package application;
 
 import java.io.PrintWriter;
+import java.util.LinkedList;
 import java.util.List;
 
+import scraper.DataLoader;
+import scraper.DataSaver;
 import scraper.GetSongList;
 import shows.Show;
 import shows.ShowList;
 import songs.Song;
+import songs.SongUtils;
 
 public class MainApp {
 	private static List<Song> songList;
 	private static ShowList showList;
+	// TODO: Calculate this number
+	private static int maxSongsPerShow = 30;
+	private static int numSongsLeftToSelect;
 	
-	public static void main(String[] args) {
+	private static boolean getListsFromInternet() {
 		showList = new ShowList();
 		songList = GetSongList.getSongList();
+		//songList = GetSongList.getShortSongList(2);
 		
 		for (Song song : songList) {
-		/*
-		if (true) {
-			Song song = songList.get(1);
-			*/			
 			System.out.println("Songs: " + song.toString());
 			song.populateShowList(songList);
+		}
+		
+		songList.sort(null);
 
+		for (Song song : songList) {
+			System.out.println("Getting list for song: " + song.getName());
 			List<Show> currentShowList = song.getShowList();
 			for (Show show : currentShowList) {
 				if (!showList.contains(show)) {
@@ -36,105 +45,119 @@ public class MainApp {
 			}
 		}
 		
-		// Save the lists to files
-		try {
-			PrintWriter songListWriter = new PrintWriter("SongList.csv", "UTF-8");			
-			PrintWriter showListOfSongsWriter = new PrintWriter("ListOfShowsPerSong.csv", "UTF-8");
-			PrintWriter showListWriter = new PrintWriter("ShowList.csv", "UTF-8");
-			PrintWriter songListOfShowsWriter = new PrintWriter("ListOfSongsPerShow.csv", "UTF-8");
-			
-			// Write the song and the corresponding show lists
-			for (Song song : songList) {
-				int songIndex = getIndexOfSong(song);
-				if (songIndex < 0) {
-					System.out.println("Error: Song not found in list: " + song.toString());
-					continue;
-				}
-				songListWriter.println(songIndex + "," + song.getName() + "," + song.getURL());
-				
-				List<Show> showListOfSong = song.getShowList();
-				if (showListOfSong == null) {
-					continue;
-				}
-				
-				for (Show show : showListOfSong) {
-					int showIndex = getIndexOfShow(show);
-					if (showIndex < 0) {
-						System.out.println("Error: Show not found in show list of song: " + song);
-						continue;
-					}
-					showListOfSongsWriter.println(songIndex + "," + showIndex);
-				}
-			}
-			songListWriter.close();
-			showListOfSongsWriter.close();
-			
-			// Write the show and the corresponding song lists
-			for (Show show : showList) {
-				int showIndex = getIndexOfShow(show);
-				if (showIndex < 0) {
-					System.out.println("Error: Show not found in list: " + show.toString());
-					continue;
-				}
-				showListWriter.println(showIndex + "," + show.getURL() );
-				
-				List<Song> songListOfShow = show.getSongList();
-				
-				if (songListOfShow == null) {
-					continue;
-				}
-				
-				for (Song song : songListOfShow) {
-					int songIndex = getIndexOfSong(song);
-					if (songIndex < 0) {
-						System.out.println("Error: Song " + song.getName() + " not found in song list of show: " + show.toString());
-						continue;
-					}
-					songListOfShowsWriter.println(showIndex + "," + songIndex);
-				}
-			}
-			showListWriter.close();
-			songListOfShowsWriter.close();
-			
-		} catch (Exception e) {
-			e.printStackTrace();
+		return false;
+	}
+	
+	// NOTE: Trying this with 57 songs took 20,000 seconds. Try something else
+	private static boolean chooseShow(final int numShowsToSelect) {
+		boolean rval = false;
+		
+		// Check if we can exit early
+		if (numShowsToSelect * maxSongsPerShow < numSongsLeftToSelect) {
+			//System.out.println("Early exit - Need to select " + numSongsLeftToSelect + " songs in only " + numShowsToSelect + " shows");
+			return false;
 		}
 		
+		Song nextUnplayedSong = SongUtils.getNextUnplayedSong(songList);
+		if (nextUnplayedSong == null) {
+			// The "we're done" return
+			return true;
+		} else {
+			List<Show> currentShowList = nextUnplayedSong.getShowList();
+			
+			for (Show currentShow : currentShowList) {
+				int numSongsAdded = currentShow.select();
+				
+				numSongsLeftToSelect -= numSongsAdded;
+				
+				if (	numSongsLeftToSelect == 0
+						|| chooseShow(numShowsToSelect - 1)) {
+					return true;
+				} else {
+					int numSongsRemoved = currentShow.unselect();
+					numSongsLeftToSelect += numSongsRemoved;
+				}
+			}
+		}
+		
+		return false;
+	}
+	
+	private static void doGreedyRoutine() {
+		Song nextUnplayedSong;
+		while ((nextUnplayedSong = SongUtils.getNextUnplayedSong(songList)) != null) {
+			List<Show> currentShowList = nextUnplayedSong.getShowList();
+			
+			if (currentShowList == null) {
+				continue;
+			}
+			
+			double showWeight = 0;
+			int optimalIndex = -1;
+			for (int i = 0; i < currentShowList.size(); i++) {
+				Show currentShow = currentShowList.get(i);
+				double tempShowWeight = currentShow.getShowWeight();
+				if (tempShowWeight > showWeight) {
+					showWeight = tempShowWeight;
+					optimalIndex = i;
+				}
+			}
+			
+			if (optimalIndex > -1) {
+				Show selectedShow = currentShowList.get(optimalIndex);
+				selectedShow.select();
+			}
+		}
+		
+		int i = 0;
+		for (Show showDisplay : showList) {
+			if (showDisplay.isSelected()) {
+				i++;
+				System.out.println(i + ": " + showDisplay.toString());
+			}
+		}
+	}
+	
+	public static void main(String[] args) {
+		songList = new LinkedList<Song>();
+		showList = new ShowList();
+	    
+		if (DataLoader.loadListsFromFiles(songList, showList)) {
+			System.out.println("Error reading from files. Pulling from the interwebs");
+			if (getListsFromInternet()) {
+				System.out.println("Error getting info from files. Abort");
+				return;
+			} else {
+				if (DataSaver.saveListsToFiles(songList, showList)) {
+					System.out.println("Error saving lists to files");
+				}
+			}
+		}
+		
+		numSongsLeftToSelect = songList.size();
+		
+		doGreedyRoutine();
+		
 		/*
-		for (Song song : songList) {
-			System.out.print(song.toString());
-			System.out.print("\n");
+		// This is the recursive algorithm. Takes too long!
+		// Start with a single show. Loop until we have tried almost every show. Hopefully it'll be much less than that!
+		for (int numShowsToSelect = 1; numShowsToSelect < songList.size(); numShowsToSelect++) {
+			
+			long startTime = System.nanoTime();
+			
+			if (chooseShow(numShowsToSelect)) {
+				// Success!
+				System.out.println("Successfully got it with " + numShowsToSelect + " shows!");
+				break;
+			}
+			
+			long endTime = System.nanoTime();
+			long duration = endTime - startTime;
+			
+			System.out.println("Tried with " + numShowsToSelect + " shows - took: " + (duration / 1000000000.0) + " seconds");
 		}
 		*/
 		
-		//songList.sort(null);
 	}
 	
-	private static int getIndexOfSong(Song song) {
-		if (songList == null) {
-			return -1;
-		}
-		
-		for (int i = 0; i < songList.size(); i++) {
-			Song tempSong = songList.get(i);
-			if (tempSong.getURL().equals(song.getURL())) {
-				return i;
-			}
-		}
-		return -1;
-	}
-
-	private static int getIndexOfShow(Show show) {
-		if (showList == null) {
-			return -1;
-		}
-		
-		for (int i = 0; i < showList.size(); i++) {
-			Show tempShow = showList.get(i);
-			if (tempShow.getURL().equals(show.getURL())) {
-				return i;
-			}
-		}
-		return -1;
-	}
 }

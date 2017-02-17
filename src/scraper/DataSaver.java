@@ -21,7 +21,7 @@ public class DataSaver extends DataPaths {
 			
 			// Write the song and the corresponding show lists
 			for (Song song : songList) {
-				int songIndex = SongUtils.getIndexOfSong(songList, song);
+				int songIndex = SongUtils.getIndexOfSongByURL(songList, song);
 				if (songIndex < 0) {
 					System.out.println("Error: Song not found in list: " + song.toString());
 					continue;
@@ -61,7 +61,7 @@ public class DataSaver extends DataPaths {
 				}
 				
 				for (Song song : songListOfShow) {
-					int songIndex = SongUtils.getIndexOfSong(songList, song);
+					int songIndex = SongUtils.getIndexOfSongByURL(songList, song);
 					if (songIndex < 0) {
 						System.out.println("Error: Song " + song.getName() + " not found in song list of show: " + show.toString());
 						continue;

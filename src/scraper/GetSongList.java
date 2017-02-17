@@ -10,6 +10,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import songs.Song;
+import songs.SongUtils;
 
 public class GetSongList {
 	static String site = "http://www.phish.net/songs";
@@ -63,6 +64,17 @@ public class GetSongList {
 		return songList;
 	}
 	
+	private static void removeAliases(List<Song> songList) {
+		List<Song> aliasList = getSongListHelper(".aliases");
+		
+		for (Song alias : aliasList) {
+			int aliasIndex = SongUtils.getIndexOfSongByName(songList, alias);
+			if (aliasIndex >= 0) {
+				songList.remove(aliasIndex);
+			}
+		}
+	}
+	
 	public static List<Song> getOriginalsList() {
 		return getSongListHelper(".originals");
 	}
@@ -71,7 +83,15 @@ public class GetSongList {
 		return getSongListHelper(".covers");
 	}
 
+	public static List<Song> getShortSongList(int numItems) {
+		List<Song> songList = getSongList();
+		
+		return songList.subList(0, numItems);
+	}
+	
 	public static List<Song> getSongList() {
-		return getOriginalsList();
+		List<Song> songList = getOriginalsList();
+		removeAliases(songList);
+		return songList;
 	}
 }

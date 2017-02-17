@@ -1,5 +1,6 @@
 package songs;
 
+import java.util.LinkedList;
 import java.util.List;
 
 import scraper.GetShowListOfSong;
@@ -9,11 +10,42 @@ public class Song implements Comparable<Song> {
 	private List<Show> showList;
 	private String name;
 	private String url;
+	private int playedCount = 0;
 	
 	public Song(String name, String url){
 		//System.out.println("Creating the song object for " + name);
 		this.name = name;
 		this.url = url;
+	}
+	
+	public boolean isSelected() {
+		if (	showList == null 
+				|| showList.size() == 0
+				|| playedCount > 0) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	public boolean select() {
+		playedCount++;
+		if (playedCount == 1) {
+			return true;
+		}
+		return false;
+	}
+	
+	public boolean unselect() {
+		if (playedCount == 0) {
+			return false;
+		} else {
+			playedCount--;
+			if (playedCount == 0) {
+				return true;
+			}
+		}
+		return false;
 	}
 	
 	@Override
@@ -47,6 +79,13 @@ public class Song implements Comparable<Song> {
 		}
 		
 		return sb.toString();
+	}
+	
+	public void addShow(Show show) {
+		if (this.showList == null) {
+			showList = new LinkedList<Show>();
+		}
+		showList.add(show);
 	}
 	
 	public void populateShowList(List<Song> songList){
