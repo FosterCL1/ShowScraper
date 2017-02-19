@@ -13,15 +13,22 @@ import songs.SongUtils;
 import com.opencsv.CSVReader;
 
 public class DataLoader extends DataPaths {
-	public static boolean loadListsFromFiles(List<Song> songList, ShowList showList) {
+	public static boolean loadListsFromFiles(List<Song> songList, ShowList showList, boolean bGetCovers) {
 		boolean rval = false;
+		
+		String rootDir;
+		if (bGetCovers) {
+			rootDir = coversDirectory;
+		} else {
+			rootDir = originalsDirectory;
+		}
 		
 		//songList = new LinkedList<Song>();
 		//showList = new ShowList();
 	    
 		try {
 			// Read the song list
-			CSVReader reader = new CSVReader(new FileReader(songListFile));
+			CSVReader reader = new CSVReader(new FileReader(rootDir + songListFile));
 			String [] nextLine;
 			while ((nextLine = reader.readNext()) != null) {
 			    // nextLine[] is an array of values from the line
@@ -38,7 +45,7 @@ public class DataLoader extends DataPaths {
 			reader.close();
 			
 			// Read the show list
-			CSVReader showReader = new CSVReader(new FileReader(showListFile));
+			CSVReader showReader = new CSVReader(new FileReader(rootDir + showListFile));
 			while ((nextLine = showReader.readNext()) != null) {
 				Show currentShow = new Show(nextLine[1]);
 				showList.add(currentShow);
@@ -53,7 +60,7 @@ public class DataLoader extends DataPaths {
 			
 			//TODO: This theoretically can use either reader or both. I'll just use one for now.
 			// Read the show / song link
-			CSVReader showsPerSongReader = new CSVReader(new FileReader(showsPerSongFile));
+			CSVReader showsPerSongReader = new CSVReader(new FileReader(rootDir + showsPerSongFile));
 			while ((nextLine = showsPerSongReader.readNext()) != null) {
 				int songIndex = Integer.parseInt(nextLine[0]);
 				int showIndex = Integer.parseInt(nextLine[1]);

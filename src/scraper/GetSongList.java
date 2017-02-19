@@ -75,6 +75,14 @@ public class GetSongList {
 		}
 	}
 	
+	private static void addCovers(List<Song> songList) {
+		List<Song> coversList = getSongListHelper(".covers");
+		
+		for (Song cover : coversList) {
+			songList.add(cover);
+		}
+	}
+	
 	public static List<Song> getOriginalsList() {
 		return getSongListHelper(".originals");
 	}
@@ -84,13 +92,16 @@ public class GetSongList {
 	}
 
 	public static List<Song> getShortSongList(int numItems) {
-		List<Song> songList = getSongList();
+		List<Song> songList = getSongList(false);
 		
 		return songList.subList(0, numItems);
 	}
 	
-	public static List<Song> getSongList() {
+	public static List<Song> getSongList(boolean bGetCovers) {
 		List<Song> songList = getOriginalsList();
+		
+		addCovers(songList);
+		
 		removeAliases(songList);
 		return songList;
 	}

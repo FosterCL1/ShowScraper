@@ -10,14 +10,21 @@ import shows.ShowUtils;
 
 public class DataSaver extends DataPaths {
 
-	public static boolean saveListsToFiles(List<Song> songList, List<Show> showList) {
+	public static boolean saveListsToFiles(List<Song> songList, List<Show> showList, boolean bIncludeCovers) {
 
+		String rootDir;
+		if (bIncludeCovers) {
+			rootDir = coversDirectory;
+		} else {
+			rootDir = originalsDirectory;
+		}
+		
 		// Save the lists to files
 		try {
-			PrintWriter songListWriter = new PrintWriter(songListFile, "UTF-8");			
-			PrintWriter showListOfSongsWriter = new PrintWriter(showsPerSongFile, "UTF-8");
-			PrintWriter showListWriter = new PrintWriter(showListFile, "UTF-8");
-			PrintWriter songListOfShowsWriter = new PrintWriter(songsPerShowFile, "UTF-8");
+			PrintWriter songListWriter = new PrintWriter(rootDir + songListFile, "UTF-8");			
+			PrintWriter showListOfSongsWriter = new PrintWriter(rootDir + showsPerSongFile, "UTF-8");
+			PrintWriter showListWriter = new PrintWriter(rootDir + showListFile, "UTF-8");
+			PrintWriter songListOfShowsWriter = new PrintWriter(rootDir + songsPerShowFile, "UTF-8");
 			
 			// Write the song and the corresponding show lists
 			for (Song song : songList) {

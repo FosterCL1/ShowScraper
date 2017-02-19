@@ -18,10 +18,11 @@ public class MainApp {
 	// TODO: Calculate this number
 	private static int maxSongsPerShow = 30;
 	private static int numSongsLeftToSelect;
+	private static boolean bGetCovers = true;
 	
-	private static boolean getListsFromInternet() {
+	private static boolean getListsFromInternet(boolean bGetCovers) {
 		showList = new ShowList();
-		songList = GetSongList.getSongList();
+		songList = GetSongList.getSongList(bGetCovers);
 		//songList = GetSongList.getShortSongList(2);
 		
 		for (Song song : songList) {
@@ -122,9 +123,9 @@ public class MainApp {
 		songList = new LinkedList<Song>();
 		showList = new ShowList();
 	    
-		if (DataLoader.loadListsFromFiles(songList, showList)) {
+		if (DataLoader.loadListsFromFiles(songList, showList, bGetCovers)) {
 			System.out.println("Error reading from files. Pulling from the interwebs");
-			if (getListsFromInternet()) {
+			if (getListsFromInternet(bGetCovers)) {
 				System.out.println("Error getting info from files. Abort");
 				return;
 			} else {
