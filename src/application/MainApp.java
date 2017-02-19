@@ -129,7 +129,7 @@ public class MainApp {
 				System.out.println("Error getting info from files. Abort");
 				return;
 			} else {
-				if (DataSaver.saveListsToFiles(songList, showList)) {
+				if (DataSaver.saveListsToFiles(songList, showList, bGetCovers)) {
 					System.out.println("Error saving lists to files");
 				}
 			}

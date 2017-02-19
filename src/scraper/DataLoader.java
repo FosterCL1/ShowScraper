@@ -32,11 +32,18 @@ public class DataLoader extends DataPaths {
 			String [] nextLine;
 			while ((nextLine = reader.readNext()) != null) {
 			    // nextLine[] is an array of values from the line
-				Song currentSong = new Song(nextLine[1], nextLine[2]);
+				
+				// Hack: Some songs like New York, New York have a comma. This will weed those out, since URLs don't
+				String songName = nextLine[1];
+				for (int i = 2; i < nextLine.length - 1; i++) {
+					songName += ",";
+					songName += nextLine[i];
+				}
+				
+				Song currentSong = new Song(songName, nextLine[nextLine.length - 1]);
 				songList.add(currentSong);
 				
-				// Sanity check:
-				int songIndex = SongUtils.getIndexOfSongByName(songList, currentSong);
+				int songIndex = SongUtils.getIndexOfSongByURL(songList, currentSong);
 				if (songIndex != Integer.parseInt(nextLine[0])) {
 					System.out.println("Song item is not inserted at the right index");
 					throw new Exception();
