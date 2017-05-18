@@ -1,6 +1,7 @@
 package application;
 
 import java.io.PrintWriter;
+
 import java.util.LinkedList;
 import java.util.List;
 
@@ -12,13 +13,50 @@ import shows.ShowList;
 import songs.Song;
 import songs.SongUtils;
 
+class ExecutionQueue<E> {
+	private LinkedList<E> list = new LinkedList<E>();
+	public void enqueue(E item) {
+	    list.addLast(item);
+	}
+	public E dequeue() {
+	    return list.poll();
+	}
+	public boolean hasItems() {
+	    return !list.isEmpty();
+	}
+	public int size() {
+	    return list.size();
+	}
+	public void addItems(ExecutionQueue<? extends E> q) {
+	    while (q.hasItems()) list.addLast(q.dequeue());
+    }
+}
+
+class ExecutionObject {
+	ShowList mShowList;
+	List<Song> mUnselectedSongs;
+	
+	public ExecutionObject(ShowList showList, List<Song> unselectedSongs) {
+		this.mShowList = showList;
+		this.mUnselectedSongs= unselectedSongs;
+	}
+	
+	public ShowList getShowList() {
+		return (ShowList) this.mShowList.clone();
+	}
+	
+	public List<Song> getUnselectedSongs() {
+		//return this.mUnselectedSongs.clone();
+		return new LinkedList<Song>(mUnselectedSongs);
+	}
+}
 public class MainApp {
 	private static List<Song> songList;
 	private static ShowList showList;
 	// TODO: Calculate this number
 	private static int maxSongsPerShow = 30;
 	private static int numSongsLeftToSelect;
-	private static boolean bGetCovers = true;
+	private static boolean bGetCovers = false;
 	
 	private static boolean getListsFromInternet(boolean bGetCovers) {
 		showList = new ShowList();
@@ -114,9 +152,65 @@ public class MainApp {
 		for (Show showDisplay : showList) {
 			if (showDisplay.isSelected()) {
 				i++;
-				System.out.println(i + ": " + showDisplay.toString());
+				System.out.println(i + ". " + showDisplay.toString());
 			}
 		}
+	}
+	
+
+	/**
+	 * This is a breadth first search algorithm to try to find everything. By 
+	 * the time it gets to 45 songs deep (3 times played) we're at a queue 
+	 * length of about 1 million. I suspect we'll run out of RAM quickly with
+	 * this scenario, unless it is optimized
+	 * @param unselectedSongs A list of all the unselected songs to start
+	 * @return
+	 */
+	public static ShowList doBreadthFirstSearch(List<Song> unselectedSongs) {
+		ExecutionQueue<ExecutionObject> executionQueue = new ExecutionQueue<ExecutionObject>();
+		ShowList currentShowList = null;
+		
+		executionQueue.enqueue(new ExecutionObject(new ShowList(), unselectedSongs));
+		
+		int maxDepth = -1;
+		
+		boolean bIsComplete = false;
+		
+		while (!bIsComplete) {
+			// Pop the "song" off the queue
+			ExecutionObject currentExecutionObject = executionQueue.dequeue();
+			
+			if (currentExecutionObject.mShowList.size() > maxDepth) {
+				maxDepth = maxDepth + 1;
+				System.out.println("Depth: " + maxDepth + " QueueLen = " + executionQueue.size());
+			}
+			
+			Song currentSong = currentExecutionObject.mUnselectedSongs.get(0);
+			
+			for (Show currentShow:currentSong.getShowList()) {
+				List<Song> newUnselectedSongList = currentExecutionObject.getUnselectedSongs();
+				
+				// Manually here, but optimize later
+				for (Song tempSong:currentShow.getSongList()) {
+					newUnselectedSongList.remove(tempSong);
+				}
+				
+				currentShowList = currentExecutionObject.getShowList();
+				currentShowList.add(currentShow);
+				
+				if (newUnselectedSongList.isEmpty()) {
+					// We're done
+					bIsComplete = true;
+					currentShowList.print();
+					break;
+				} else {
+					ExecutionObject nextExecutionObject = new ExecutionObject(currentShowList, newUnselectedSongList);
+					executionQueue.enqueue(nextExecutionObject);
+				}
+			}
+		}
+		
+		return currentShowList;
 	}
 	
 	public static void main(String[] args) {
@@ -136,6 +230,16 @@ public class MainApp {
 		}
 		
 		numSongsLeftToSelect = songList.size();
+		// Make sure this doesn't count the unplayed songs
+		for (Song currentSong : songList) {
+			List<Show> currentShowList = currentSong.getShowList();
+			if (	currentShowList == null ||
+					currentShowList.size() < 1) {
+				numSongsLeftToSelect--;
+			}
+		}
+		
+		doBreadthFirstSearch(songList);
 		
 		doGreedyRoutine();
 		

@@ -11,4 +11,12 @@ public class ShowList extends LinkedList<Show> {
 		}
 		return false;
 	}
+	
+	public void print() {
+		int counter = 0;
+		for (Show currentShow : this) {
+			counter = counter + 1;
+			System.out.println(counter + ": " + currentShow.toString());
+		}
+	}
 }
