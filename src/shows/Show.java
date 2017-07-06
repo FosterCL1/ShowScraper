@@ -1,6 +1,7 @@
 package shows;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -51,6 +52,21 @@ public class Show implements Comparable<Show> {
 	
 	public List<Song> getSongList() {
 		return songs;
+	}
+	
+	public void pruneSongList() {
+		// Make this an array instead of a linked list
+		// Remove anything that has been played already.
+		List<Song> prunedSongList = new ArrayList<Song>(songs.size());
+		//List<Song> prunedSongList = new LinkedList<Song>();
+		
+		for(Song currentSong : songs) {
+			if (!currentSong.isSelected()) {
+				prunedSongList.add(currentSong);
+			}
+		}
+		
+		songs = prunedSongList;
 	}
 	
 	public int select() {

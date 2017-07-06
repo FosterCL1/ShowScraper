@@ -1,5 +1,6 @@
 package songs;
 
+import java.util.Iterator;
 import java.util.List;
 
 public class SongUtils {
@@ -40,6 +41,32 @@ public class SongUtils {
 				break;
 			}
 		}
+		return rval;
+	}
+	
+	public static Song getNextUnplayedSong(List<Song> songList, Integer startIndex) {
+		Song rval = null;
+		Song song;
+		
+		Iterator<Song> songIter = songList.iterator();
+		
+		while (songIter.hasNext()) {
+			song = songIter.next();
+			if (!song.isSelected()) {
+				rval = song;
+				break;
+			}
+		}
+		
+		//for (Integer counter = startIndex; counter < songList.size(); counter++) {
+		//for (Song song : songList) {
+		//	song = songList.get(counter);
+		//	if (!song.isSelected()) {
+		//		rval = song;
+		//		break;
+		//	}
+		//}
+		
 		return rval;
 	}
 

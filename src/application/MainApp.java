@@ -1,7 +1,9 @@
 package application;
 
 import java.io.PrintWriter;
-
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -32,6 +34,24 @@ class ExecutionQueue<E> {
     }
 }
 
+class ExecutionObject2 {
+	public List<Integer> selectedShows;
+	public HashMap<Integer, List<Integer>> unselectedSongs;
+	public Integer lastSongIndex;
+	
+	public ExecutionObject2 (List<Integer> selectedShows, HashMap<Integer, List<Integer>> unselectedSongs, Integer lastSongIndex) {
+		this.selectedShows = selectedShows;
+		this.unselectedSongs = unselectedSongs;
+		this.lastSongIndex = lastSongIndex;
+	}
+	
+	public ExecutionObject2 (ExecutionObject2 original) {
+		selectedShows = new LinkedList<Integer>(original.selectedShows);
+		unselectedSongs = (HashMap<Integer, List<Integer>>) original.unselectedSongs.clone();
+		lastSongIndex = new Integer(original.lastSongIndex);
+	}
+}
+
 class ExecutionObject {
 	ShowList mShowList;
 	List<Song> mUnselectedSongs;
@@ -54,7 +74,7 @@ public class MainApp {
 	private static List<Song> songList;
 	private static ShowList showList;
 	// TODO: Calculate this number
-	private static int maxSongsPerShow = 30;
+	private static int maxSongsPerShow = 5;
 	private static int numSongsLeftToSelect;
 	private static boolean bGetCovers = false;
 	
@@ -88,18 +108,24 @@ public class MainApp {
 	}
 	
 	// NOTE: Trying this with 57 songs took 20,000 seconds. Try something else
-	private static boolean chooseShow(final int numShowsToSelect) {
+	private static boolean chooseShow(final int numShowsToSelect, final int numShowsSelected) {
 		boolean rval = false;
 		
 		// Check if we can exit early
 		if (numShowsToSelect * maxSongsPerShow < numSongsLeftToSelect) {
+		//if (numShowsToSelect == 0) {
 			//System.out.println("Early exit - Need to select " + numSongsLeftToSelect + " songs in only " + numShowsToSelect + " shows");
 			return false;
 		}
 		
-		Song nextUnplayedSong = SongUtils.getNextUnplayedSong(songList);
+		Song nextUnplayedSong = SongUtils.getNextUnplayedSong(songList, numShowsSelected);
 		if (nextUnplayedSong == null) {
 			// The "we're done" return
+			for (Show show : showList) {
+				if (show.isSelected()) {
+					System.out.println(show.getURL());
+				}
+			}
 			return true;
 		} else {
 			List<Show> currentShowList = nextUnplayedSong.getShowList();
@@ -110,7 +136,7 @@ public class MainApp {
 				numSongsLeftToSelect -= numSongsAdded;
 				
 				if (	numSongsLeftToSelect == 0
-						|| chooseShow(numShowsToSelect - 1)) {
+						|| chooseShow(numShowsToSelect - 1, numShowsSelected + 1)) {
 					return true;
 				} else {
 					int numSongsRemoved = currentShow.unselect();
@@ -213,8 +239,187 @@ public class MainApp {
 		return currentShowList;
 	}
 	
+	public static Integer songToInt(Song song, List<Song> songList) {
+		return songList.indexOf(song);
+	}
+	
+	public static Song intToSong(Integer songInt, List<Song> songList) {
+		return songList.get(songInt);
+	}
+	
+	public static Integer showToInt(Show show, ShowList showList) {
+		return showList.indexOf(show);
+	}
+	
+	public static Show intToShow(Integer showInt, ShowList showList) {
+		return showList.get(showInt);
+	}
+	
+	public static ExecutionObject2 doBFS_2(List<Song> songList) {
+		// Create the dumbed-down list of songs
+		HashMap<Integer, List<Integer>> songHashMap = new HashMap<>();
+		Integer songListSize = songList.size();
+		List<Integer> songListByTimesPlayed = new ArrayList(songListSize);
+		for (Song song : songList) {
+			List<Integer> songsShowList = new LinkedList<Integer>();
+			for (Show show : song.getShowList()) {
+				songsShowList.add(showToInt(show, showList));
+			}
+			Integer songInt = songToInt(song, songList);
+			songHashMap.put(songInt, songsShowList);
+			songListByTimesPlayed.add(songInt);
+		}
+		
+		// Create the dumbed-down list of shows
+		HashMap<Integer, List<Integer>> showHashMap = new HashMap<>();
+		for (Show show : showList) {
+			List<Integer> showsSongList = new LinkedList<Integer>();
+			for (Song song : show.getSongList()) {
+				showsSongList.add(songToInt(song, songList));
+			}
+			showHashMap.put(showToInt(show, showList), showsSongList);
+		}
+		
+		List<Integer> selectedShows = new LinkedList<>();
+		boolean bIsComplete = false;
+		
+		ExecutionQueue executionQueue = new ExecutionQueue();
+		
+		ExecutionObject2 executionObject = new ExecutionObject2(selectedShows, songHashMap, -1);
+		executionQueue.enqueue(executionObject);
+		
+		Integer maxDepth = -1;
+		
+		Long lastDepthTime = System.nanoTime();
+		Long currentTime;
+		
+		while (!bIsComplete) {
+			ExecutionObject2 currentExecutionObject = (ExecutionObject2) executionQueue.dequeue();
+			
+			Integer currentDepth = currentExecutionObject.selectedShows.size();
+			if (currentDepth > maxDepth) {
+				currentTime = System.nanoTime();
+				System.out.println("Current Depth: " + currentDepth 
+								+ " Queue Size: " + executionQueue.size() 
+								+ " Songs Left: " + currentExecutionObject.unselectedSongs.size() 
+								+ " This duration: " + ((currentTime - lastDepthTime) / 1000000000.0));
+				maxDepth = currentDepth;
+			}
+			
+			List<Integer> nextShowList = null;
+			for (Integer nextUnselectedSong = currentExecutionObject.lastSongIndex; nextUnselectedSong < songListSize; nextUnselectedSong++) {
+				if (currentExecutionObject.unselectedSongs.containsKey(nextUnselectedSong)) {
+					nextShowList = currentExecutionObject.unselectedSongs.get(nextUnselectedSong);
+					currentExecutionObject.lastSongIndex = nextUnselectedSong;
+					break;
+				}
+			}
+			if (nextShowList == null) {
+				return currentExecutionObject;
+			} else { 
+				for (Integer showCounter : nextShowList) {
+					ExecutionObject2 nextExecutionObject = new ExecutionObject2(currentExecutionObject);
+					List<Integer> playedSongsList = showHashMap.get(showCounter);
+					//List<Integer> playedSongsList;
+					for (Integer songCounter : playedSongsList) {
+						nextExecutionObject.unselectedSongs.remove(songCounter);
+					}
+					nextExecutionObject.selectedShows.add(showCounter);
+					executionQueue.enqueue(nextExecutionObject);
+				}
+			}
+		}
+		
+		return null;
+	}
+	
+	private static void doRecursiveRoutine() {
+
+		for (int numShowsToSelect = 1; numShowsToSelect < songList.size(); numShowsToSelect++) {
+			
+			long startTime = System.nanoTime();
+			
+			if (chooseShow(numShowsToSelect, 0)) {
+				// Success!
+				System.out.println("Successfully got it with " + numShowsToSelect + " shows!");
+				break;
+			}
+			
+			long endTime = System.nanoTime();
+			long duration = endTime - startTime;
+			
+			System.out.println("Tried with " + numShowsToSelect + " shows - took: " + (duration / 1000000000.0) + " seconds");
+		}
+		
+	}
+	
+	private static int selectAllSinglePlayedSongs() {
+		int numShowsSelected = 0;
+		
+		for (Song song : songList) {
+			if (song.listSize() == 1) {
+				Show currentShow = song.getShowList().get(0);
+				if (!currentShow.isSelected()) {
+					numSongsLeftToSelect -= currentShow.select();
+					numShowsSelected++;
+				}
+			}
+		}
+		
+		return numShowsSelected;
+	}
+	
+	private static void pruneShowSetlists() {
+		for (Show show : showList) {
+			show.pruneSongList();
+		}
+	}
+	
+	private static void prunePlayedSongs() {
+		Iterator<Song> songIter = songList.iterator();
+		
+		while(songIter.hasNext()) {
+			Song currentSong = songIter.next();
+			
+			if (currentSong.isSelected()) {
+				songIter.remove();
+			}
+		}
+	}
+	
+	private static void doRecursiveRoutine2() {
+		
+		// Select all of the single-played shows
+		// Select all songs covered by those shows
+		int numShowsSelected = selectAllSinglePlayedSongs();
+		
+		// Remove all those songs from the show setlists
+		pruneShowSetlists();
+		
+		prunePlayedSongs();
+
+		for (int numShowsToSelect = 1; numShowsToSelect < songList.size(); numShowsToSelect++) {
+			
+			long startTime = System.nanoTime();
+			
+			if (chooseShow(numShowsToSelect, numShowsSelected)) {
+				// Success!
+				System.out.println("Successfully got it with " + (numShowsToSelect + numShowsSelected) + " shows!");
+				System.out.println(showList);
+				break;
+			}
+			
+			long endTime = System.nanoTime();
+			long duration = endTime - startTime;
+			
+			System.out.println("Tried with " + (numShowsToSelect + numShowsSelected) + " shows - took: " + (duration / 1000000000.0) + " seconds");
+		}
+		
+	}
+	
 	public static void main(String[] args) {
-		songList = new LinkedList<Song>();
+		//songList = new LinkedList<Song>();
+		songList = new ArrayList<Song>(300);
 		showList = new ShowList();
 	    
 		if (DataLoader.loadListsFromFiles(songList, showList, bGetCovers)) {
@@ -239,29 +444,17 @@ public class MainApp {
 			}
 		}
 		
-		doBreadthFirstSearch(songList);
+		//doBFS_2(songList);
 		
-		doGreedyRoutine();
+		//doBreadthFirstSearch(songList);
 		
-		/*
+		//doGreedyRoutine();
+		
 		// This is the recursive algorithm. Takes too long!
 		// Start with a single show. Loop until we have tried almost every show. Hopefully it'll be much less than that!
-		for (int numShowsToSelect = 1; numShowsToSelect < songList.size(); numShowsToSelect++) {
-			
-			long startTime = System.nanoTime();
-			
-			if (chooseShow(numShowsToSelect)) {
-				// Success!
-				System.out.println("Successfully got it with " + numShowsToSelect + " shows!");
-				break;
-			}
-			
-			long endTime = System.nanoTime();
-			long duration = endTime - startTime;
-			
-			System.out.println("Tried with " + numShowsToSelect + " shows - took: " + (duration / 1000000000.0) + " seconds");
-		}
-		*/
+		doRecursiveRoutine();
+		
+		//doRecursiveRoutine2();
 		
 	}
 	
