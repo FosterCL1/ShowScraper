@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 
 import shows.Show;
@@ -14,12 +15,16 @@ import songs.Song;
 public class MinimalProblem {
 	private MinimalShow minimalShowList[];
 	private MinimalSong minimalSongList[];
+	private ArrayList<MinimalSong> unselectedSongList;
+	private LinkedList<Integer> selectedShows;
 	
 	// Populate
 	public MinimalProblem(List<Song> songList, ShowList showList) {
 		//minimalShowList = new ArrayList<>(showList.size());
 		minimalShowList = new MinimalShow[showList.size()];
 		minimalSongList = new MinimalSong[songList.size()];
+		selectedShows = new LinkedList<>();
+		
 		for (Song song : songList) {
 			List<Show> currentShowList = song.getShowList();
 			Integer currentSongIndex = songList.indexOf(song);
@@ -37,8 +42,11 @@ public class MinimalProblem {
 				minimalShowList[currentShowIndex].addSong(currentSongIndex);
 			}
 		}
+		
+		unselectedSongList = new ArrayList(Arrays.asList(minimalSongList));
 	}
 	
+	// Helpers
 	public void printSongLists() {
 		printLists(minimalSongList);
 	}
@@ -53,7 +61,7 @@ public class MinimalProblem {
 		}
 	}
 	
-	// Sort by array list size (times played or number of songs in a show
+	// Sort by array list size (times played or number of songs in a show)
 	Comparator listSizeComparator = new Comparator<MinimalList>() {
 		public int compare(MinimalList list1, MinimalList list2) {
 			Integer list1size = list1.listSize();
@@ -61,6 +69,21 @@ public class MinimalProblem {
 			if (list1size < list2size) {
 				return -1;
 			} else if (list1size == list2size) {
+				return 0;
+			} else {
+				return 1;
+			}
+		}
+	};
+
+	// Sort by item index
+	Comparator listIndexComparator = new Comparator<MinimalList>() {
+		public int compare(MinimalList list1, MinimalList list2) {
+			Integer list1index = list1.index;
+			Integer list2index = list2.index;
+			if (list1index < list2index) {
+				return -1;
+			} else if (list1index == list2index) {
 				return 0;
 			} else {
 				return 1;
@@ -109,7 +132,71 @@ public class MinimalProblem {
 		Arrays.sort(minimalShowList, listItemsComparator);
 	}
 	
-	// Select single-selected songs
+	public void sortShowsByIndex() {
+		Arrays.sort(minimalShowList, listIndexComparator);
+	}
+	
+	// Select single-played songs
+	public boolean selectSinglePlayedSongs() {
+		boolean rval = false;
+		LinkedList<Integer> songIndicesToRemove = new LinkedList<>();
+		
+		Collections.sort(unselectedSongList, listIndexComparator);
+		sortShowsByIndex();
+		
+		Iterator<MinimalSong> singlePlayedSongsIter = unselectedSongList.iterator();
+		
+		boolean bKeepGoing = true;
+		
+		while (bKeepGoing && singlePlayedSongsIter.hasNext()) {
+			MinimalSong currentSinglePlayedSong = singlePlayedSongsIter.next();
+			if (currentSinglePlayedSong.listSize() > 1) {
+				bKeepGoing = false;
+			} else {
+				System.out.println("Song " + currentSinglePlayedSong.index + " has only been played once in show " + currentSinglePlayedSong.index + " ");
+				List<Integer> currentShowList = currentSinglePlayedSong.getSortedList();
+				for (Integer currentShow : currentShowList) {
+					selectedShows.add(currentShow);
+					System.out.print("This will remove songs ");
+					for (Integer thisShowsSongs : minimalShowList[currentShow].getSortedList()) {
+						if (!songIndicesToRemove.contains(thisShowsSongs)) {
+							songIndicesToRemove.add(thisShowsSongs);
+							System.out.print(thisShowsSongs + " ");
+						}
+					}
+					System.out.print("\n");
+				}
+			}
+		}
+		
+		Collections.sort(unselectedSongList, listIndexComparator);
+		
+		int unselectedSongCounter = 0;
+		Iterator<Integer> songsToRemoveIter = songIndicesToRemove.iterator();
+		
+		System.out.print("Num unselected songs was: " + unselectedSongList.size());
+		
+		while (songsToRemoveIter.hasNext()) {
+			Integer songToRemove = songsToRemoveIter.next();
+			
+			Iterator<MinimalSong> unselectedSongsIter = unselectedSongList.iterator();
+			boolean bFound = false;
+			
+			while (!bFound && unselectedSongsIter.hasNext()) {
+				MinimalSong testSong = unselectedSongsIter.next();
+				if (songToRemove == testSong.index) {
+					unselectedSongsIter.remove();
+					bFound = true;
+				}
+			}
+		}
+		
+		System.out.print(", is now: " + unselectedSongList.size());
+		
+		
+		return (songIndicesToRemove.size() > 0);
+	}
+	
 	// Sort by array list entries
 	// Remove duplicate shows
 }

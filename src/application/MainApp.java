@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
+import minimalProblem.MinimalProblem;
 import scraper.DataLoader;
 import scraper.DataSaver;
 import scraper.GetSongList;
@@ -77,6 +78,7 @@ public class MainApp {
 	private static int maxSongsPerShow = 5;
 	private static int numSongsLeftToSelect;
 	private static boolean bGetCovers = false;
+	private static long numShowsTested = 0;
 	
 	private static boolean getListsFromInternet(boolean bGetCovers) {
 		showList = new ShowList();
@@ -110,6 +112,7 @@ public class MainApp {
 	// NOTE: Trying this with 57 songs took 20,000 seconds. Try something else
 	private static boolean chooseShow(final int numShowsToSelect, final int numShowsSelected) {
 		boolean rval = false;
+		numShowsTested++;
 		
 		// Check if we can exit early
 		if (numShowsToSelect * maxSongsPerShow < numSongsLeftToSelect) {
@@ -388,6 +391,7 @@ public class MainApp {
 	}
 	
 	private static void doRecursiveRoutine2() {
+		numShowsTested = 0;
 		
 		// Select all of the single-played shows
 		// Select all songs covered by those shows
@@ -397,10 +401,16 @@ public class MainApp {
 		pruneShowSetlists();
 		
 		prunePlayedSongs();
+		
+		songList.sort(null);
+		
+		printListSizes(songList, showList);
+		
+		long startTime = System.nanoTime();
 
 		for (int numShowsToSelect = 1; numShowsToSelect < songList.size(); numShowsToSelect++) {
 			
-			long startTime = System.nanoTime();
+			long thisRunsStartTime = System.nanoTime();
 			
 			if (chooseShow(numShowsToSelect, numShowsSelected)) {
 				// Success!
@@ -411,10 +421,47 @@ public class MainApp {
 			
 			long endTime = System.nanoTime();
 			long duration = endTime - startTime;
+			double NS_PER_SEC = 1000000000.0;
+			double seconds = duration / NS_PER_SEC;
+			double thisRunsSeconds = (endTime - thisRunsStartTime) / NS_PER_SEC;
 			
-			System.out.println("Tried with " + (numShowsToSelect + numShowsSelected) + " shows - took: " + (duration / 1000000000.0) + " seconds");
+			System.out.println("Tried with " 
+			+ (numShowsToSelect + numShowsSelected) 
+			+ " shows - took: " 
+			+ thisRunsSeconds
+			+ " seconds at "
+			+ (numShowsTested / seconds) 
+			+ " tests per second");
 		}
 		
+	}
+	
+	private static void printListSizes(List<Song> songList, ShowList showList) {
+		System.out.println("Number of songs: " + songList.size());
+		System.out.println("Number of shows: " + showList.size());
+		
+		int totalSongsPlayed = 0;
+		for (Show show : showList) {
+			totalSongsPlayed += show.getSongList().size();
+		}
+		System.out.println("Number of songs played: " + totalSongsPlayed);
+		System.out.println("Average songs per show: " + totalSongsPlayed / showList.size());
+		
+		int numSongsInvestigated = 0;
+		int numTimesPlayed = 1;
+		while (numSongsInvestigated < songList.size()) {
+			int numSongsPlayedThisManyTimes = 0;
+			for (Song song : songList) {
+				if (song.getShowList().size() == numTimesPlayed) {
+					numSongsPlayedThisManyTimes++;
+				}
+			}
+			if (numSongsPlayedThisManyTimes > 0) {
+				System.out.println(numSongsPlayedThisManyTimes + " songs have been played " + numTimesPlayed + " times");
+			}
+			numSongsInvestigated += numSongsPlayedThisManyTimes;
+			numTimesPlayed++;
+		}
 	}
 	
 	public static void main(String[] args) {
@@ -444,6 +491,8 @@ public class MainApp {
 			}
 		}
 		
+		//printListSizes(songList, showList);
+		
 		//doBFS_2(songList);
 		
 		//doBreadthFirstSearch(songList);
@@ -452,10 +501,17 @@ public class MainApp {
 		
 		// This is the recursive algorithm. Takes too long!
 		// Start with a single show. Loop until we have tried almost every show. Hopefully it'll be much less than that!
-		doRecursiveRoutine();
+		//doRecursiveRoutine();
 		
 		//doRecursiveRoutine2();
 		
+		// CLF: Try to use the new technique
+		MinimalProblem minimalProblem = new MinimalProblem(songList, showList);
+		minimalProblem.sortSongsByTimesPlayed();
+		minimalProblem.printSongLists();
+		minimalProblem.sortShowsBySongList();
+		minimalProblem.printShowLists();
+		minimalProblem.selectSinglePlayedSongs();
 	}
 	
 }
