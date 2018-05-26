@@ -33,21 +33,31 @@ public class MinimalProblem {
 		
 		for (Song song : songList) {
 			List<Show> currentShowList = song.getShowList();
-			Integer currentSongIndex = songList.indexOf(song);
-			//MinimalSong currentMinimalSong = minimalSongList.get(currentSongIndex);
-			minimalSongList[currentSongIndex] = new MinimalSong(currentSongIndex, currentShowList.size());
-			MinimalSong currentMinimalSong = minimalSongList[currentSongIndex];
-			
-			for (Show show : currentShowList) {
-				Integer currentShowIndex = showList.indexOf(show);
-				currentMinimalSong.addShow(currentShowIndex);
-				//MinimalShow currentShow = minimalShowList.get(currentShowIndex);
-				if (minimalShowList[currentShowIndex] == null) {
-					minimalShowList[currentShowIndex] = new MinimalShow(currentShowIndex, show.getSongList().size());
+			if (currentShowList == null) {
+				System.out.println("Found a song without a play count");
+			} else {
+				Integer currentSongIndex = songList.indexOf(song);
+				//MinimalSong currentMinimalSong = minimalSongList.get(currentSongIndex);
+				minimalSongList[currentSongIndex] = new MinimalSong(currentSongIndex, currentShowList.size());
+				MinimalSong currentMinimalSong = minimalSongList[currentSongIndex];
+				
+				for (Show show : currentShowList) {
+					Integer currentShowIndex = showList.indexOf(show);
+					currentMinimalSong.addShow(currentShowIndex);
+					//MinimalShow currentShow = minimalShowList.get(currentShowIndex);
+					if (minimalShowList[currentShowIndex] == null) {
+						minimalShowList[currentShowIndex] = new MinimalShow(currentShowIndex, show.getSongList().size());
+					}
+					minimalShowList[currentShowIndex].addSong(currentSongIndex);
 				}
-				minimalShowList[currentShowIndex].addSong(currentSongIndex);
 			}
 		}
+		
+//
+//		MinimalSong songListCopy[] = minimalSongList.clone();
+//		for (int i = 0, int j = 0; i < minimalSongList.length; i++) {
+//			if (songListCopy[i].)
+//		}
 		
 		unselectedSongList = new ArrayList(Arrays.asList(minimalSongList));
 		unselectedShowList = new ArrayList(Arrays.asList(minimalShowList));
@@ -160,22 +170,18 @@ public class MinimalProblem {
 		
 		while (bKeepGoing && singlePlayedSongsIter.hasNext()) {
 			MinimalSong currentSinglePlayedSong = singlePlayedSongsIter.next();
-			if (currentSinglePlayedSong.listSize() > 1) {
-				bKeepGoing = false;
-			} else {
-				System.out.println("Song " + currentSinglePlayedSong.index + " has only been played once in show " + currentSinglePlayedSong.index + " ");
-				List<Integer> currentShowList = currentSinglePlayedSong.getSortedList();
-				for (Integer currentShow : currentShowList) {
-					selectedShows.add(currentShow);
-					System.out.print("This will remove songs ");
-					for (Integer thisShowsSongs : minimalShowList[currentShow].getSortedList()) {
-						if (!songIndicesToRemove.contains(thisShowsSongs)) {
-							songIndicesToRemove.add(thisShowsSongs);
-							System.out.print(thisShowsSongs + " ");
-						}
+			System.out.println("Song " + currentSinglePlayedSong.index + " has only been played once in show " + currentSinglePlayedSong.index + " ");
+			List<Integer> currentShowList = currentSinglePlayedSong.getSortedList();
+			for (Integer currentShow : currentShowList) {
+				selectedShows.add(currentShow);
+				System.out.print("This will remove songs ");
+				for (Integer thisShowsSongs : minimalShowList[currentShow].getSortedList()) {
+					if (!songIndicesToRemove.contains(thisShowsSongs)) {
+						songIndicesToRemove.add(thisShowsSongs);
+						System.out.print(thisShowsSongs + " ");
 					}
-					System.out.print("\n");
 				}
+				System.out.print("\n");
 			}
 		}
 		

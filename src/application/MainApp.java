@@ -79,7 +79,7 @@ public class MainApp {
 	// TODO: Calculate this number
 	private static int maxSongsPerShow = 5;
 	private static int numSongsLeftToSelect;
-	private static boolean bGetCovers = false;
+	private static boolean bGetCovers = true;
 	private static long numShowsTested = 0;
 	
 	private static boolean getListsFromInternet(boolean bGetCovers) {
@@ -533,8 +533,9 @@ public class MainApp {
 	}
 	
 	public static void main(String[] args) {
+		Long tic = System.nanoTime();
 		//songList = new LinkedList<Song>();
-		songList = new ArrayList<Song>(300);
+		songList = new ArrayList<Song>(3000);
 		showList = new ShowList();
 	    
 		if (DataLoader.loadListsFromFiles(songList, showList, bGetCovers)) {
@@ -548,6 +549,8 @@ public class MainApp {
 				}
 			}
 		}
+
+		List<Song> correctedSongList = new LinkedList<>();
 		
 		numSongsLeftToSelect = songList.size();
 		// Make sure this doesn't count the unplayed songs
@@ -556,6 +559,8 @@ public class MainApp {
 			if (	currentShowList == null ||
 					currentShowList.size() < 1) {
 				numSongsLeftToSelect--;
+			} else {
+				correctedSongList.add(currentSong);
 			}
 		}
 		
@@ -584,7 +589,7 @@ public class MainApp {
 //			minimalProblem.printShowLists();
 //		}
 		
-		MinimalProblem minimalProblem = new MinimalProblem(songList, showList);
+		MinimalProblem minimalProblem = new MinimalProblem(correctedSongList, showList);
 		while (minimalProblem.step1_sortSongsByTimesPlayed(true) ) {
 			minimalProblem.step2_createSinglePlayedSongsList(true);
 			minimalProblem.step3_createSetOfShowsToRemove(false);
@@ -650,6 +655,14 @@ public class MainApp {
 				i++;
 			}
 		}
+		
+		long toc = System.nanoTime();
+		long duration = toc - tic;
+		double NS_PER_SEC = 1000000000.0;
+		double seconds = duration / NS_PER_SEC;
+		
+		System.out.println("Duration: " + seconds + " seconds");
+		
 		
 //		System.out.println(newShowList);
 	}
