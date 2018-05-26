@@ -8,6 +8,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 import minimalProblem.MinimalProblem;
+import minimalProblem.MinimalShow;
+import minimalProblem.MinimalSong;
 import scraper.DataLoader;
 import scraper.DataSaver;
 import scraper.GetSongList;
@@ -258,7 +260,7 @@ public class MainApp {
 		return showList.get(showInt);
 	}
 	
-	public static ExecutionObject2 doBFS_2(List<Song> songList) {
+	public static ExecutionObject2 doBFS_2(List<Song> songList, ShowList currentShowList) {
 		// Create the dumbed-down list of songs
 		HashMap<Integer, List<Integer>> songHashMap = new HashMap<>();
 		Integer songListSize = songList.size();
@@ -266,7 +268,7 @@ public class MainApp {
 		for (Song song : songList) {
 			List<Integer> songsShowList = new LinkedList<Integer>();
 			for (Show show : song.getShowList()) {
-				songsShowList.add(showToInt(show, showList));
+				songsShowList.add(showToInt(show, currentShowList));
 			}
 			Integer songInt = songToInt(song, songList);
 			songHashMap.put(songInt, songsShowList);
@@ -275,12 +277,12 @@ public class MainApp {
 		
 		// Create the dumbed-down list of shows
 		HashMap<Integer, List<Integer>> showHashMap = new HashMap<>();
-		for (Show show : showList) {
+		for (Show show : currentShowList) {
 			List<Integer> showsSongList = new LinkedList<Integer>();
 			for (Song song : show.getSongList()) {
 				showsSongList.add(songToInt(song, songList));
 			}
-			showHashMap.put(showToInt(show, showList), showsSongList);
+			showHashMap.put(showToInt(show, currentShowList), showsSongList);
 		}
 		
 		List<Integer> selectedShows = new LinkedList<>();
@@ -464,6 +466,72 @@ public class MainApp {
 		}
 	}
 	
+
+	private static void doRecursiveRoutineWithVariables(List<Song> songListVariable, ShowList showListVariable) {
+
+		for (int numShowsToSelect = 1; numShowsToSelect < songListVariable.size(); numShowsToSelect++) {
+			
+			long startTime = System.nanoTime();
+			
+			if (chooseShowWithVariables(numShowsToSelect, 0, songListVariable.size(), songListVariable, showListVariable)) {
+				// Success!
+				System.out.println("Successfully got it with " + numShowsToSelect + " shows!");
+				break;
+			}
+			
+			long endTime = System.nanoTime();
+			long duration = endTime - startTime;
+			
+			System.out.println("Tried with " + numShowsToSelect + " shows - took: " + (duration / 1000000000.0) + " seconds");
+		}
+	}
+
+	// NOTE: Trying this with 57 songs took 20,000 seconds. Try something else
+	private static boolean chooseShowWithVariables(final int numShowsToSelect, 
+			final int numShowsSelected, 
+			int numSongsLeftToSelectVariable,
+			List<Song> songListVariable, 
+			ShowList showListVariable) {
+		boolean rval = false;
+		numShowsTested++;
+		
+		// Check if we can exit early
+//		if (numShowsToSelect * maxSongsPerShow < numSongsLeftToSelectVariable) {
+		if (numShowsToSelect == 0) {
+//			//System.out.println("Early exit - Need to select " + numSongsLeftToSelect + " songs in only " + numShowsToSelect + " shows");
+			return false;
+		}
+		
+		Song nextUnplayedSong = SongUtils.getNextUnplayedSong(songListVariable, numShowsSelected);
+		if (nextUnplayedSong == null) {
+			// The "we're done" return
+			for (Show show : showListVariable) {
+				if (show.isSelected()) {
+					System.out.println(show.getURL());
+				}
+			}
+			return true;
+		} else {
+			List<Show> currentShowList = nextUnplayedSong.getShowList();
+			
+			for (Show currentShow : currentShowList) {
+				int numSongsAdded = currentShow.select();
+				
+				numSongsLeftToSelectVariable -= numSongsAdded;
+				
+				if (	numSongsLeftToSelectVariable == 0
+						|| chooseShowWithVariables(numShowsToSelect - 1, numShowsSelected + 1, numSongsLeftToSelectVariable, songListVariable, showListVariable)) {
+					return true;
+				} else {
+					int numSongsRemoved = currentShow.unselect();
+					numSongsLeftToSelectVariable += numSongsRemoved;
+				}
+			}
+		}
+		
+		return false;
+	}
+	
 	public static void main(String[] args) {
 		//songList = new LinkedList<Song>();
 		songList = new ArrayList<Song>(300);
@@ -506,12 +574,84 @@ public class MainApp {
 		//doRecursiveRoutine2();
 		
 		// CLF: Try to use the new technique
+//		MinimalProblem minimalProblem = new MinimalProblem(songList, showList);
+//		minimalProblem.sortSongsByTimesPlayed();
+//		minimalProblem.printSongLists();
+//		minimalProblem.sortShowsBySongList();
+//		minimalProblem.printShowLists();
+//		while (minimalProblem.selectSinglePlayedSongs()) {
+//			minimalProblem.sortShowsByNumSongs();
+//			minimalProblem.printShowLists();
+//		}
+		
 		MinimalProblem minimalProblem = new MinimalProblem(songList, showList);
-		minimalProblem.sortSongsByTimesPlayed();
-		minimalProblem.printSongLists();
-		minimalProblem.sortShowsBySongList();
-		minimalProblem.printShowLists();
-		minimalProblem.selectSinglePlayedSongs();
+		while (minimalProblem.step1_sortSongsByTimesPlayed(true) ) {
+			minimalProblem.step2_createSinglePlayedSongsList(true);
+			minimalProblem.step3_createSetOfShowsToRemove(false);
+			minimalProblem.step4_createSetOfAllSongsToRemove(false);
+			minimalProblem.step5_removeSongsFromSongList(false);
+			minimalProblem.step6_removeSongsFromShowLists(false);
+			minimalProblem.step7_sortShowListBySongList(false);
+			minimalProblem.step9_removeDuplicateShows(false);
+			minimalProblem.step_9_2_removeSubsets(false);
+		}
+		minimalProblem.printStatus(true);
+		//minimalProblem.step10_tryBruteForce(true);
+		
+		// After this, let's create a new List<Song> so that I can try the BFS again
+		List<MinimalSong> reducedSongList = minimalProblem.getSongList();
+		List<MinimalShow> reducedShowList = minimalProblem.getShowList();
+		LinkedList<Song> newSongList = new LinkedList<>();
+		ShowList newShowList = new ShowList();
+		
+		for (MinimalSong songCounter : reducedSongList) {
+			Integer songIndex = songCounter.getIndex();
+			Song originalSong = songList.get(songIndex);
+			Song newSong = new Song(originalSong.getName(), originalSong.getURL());
+			
+			List<Integer> currentSongsShowList = songCounter.getSortedList();
+			for (Integer showCounter : currentSongsShowList) {
+				Show currentShowInNewList = null;
+				Show originalShow = showList.get(showCounter);
+				for (Show showTester : newShowList) {
+					if (showTester.getURL().equals(originalShow.getURL())) {
+						currentShowInNewList = showTester;
+						break;
+					}
+				}
+				if (currentShowInNewList == null) {
+					currentShowInNewList = new Show(originalShow.getURL());
+					newShowList.add(currentShowInNewList);
+				}
+				currentShowInNewList.addSong(newSong);
+				newSong.addShow(currentShowInNewList);
+			}
+			newSongList.add(newSong);
+		}
+		
+		newSongList.sort(null);
+		
+		//doBreadthFirstSearch(newSongList);
+		//doBFS_2(newSongList, newShowList);
+		doRecursiveRoutineWithVariables(newSongList, newShowList);
+		
+		List<Integer> selectedMinimalShowList = minimalProblem.getSelectedShowList();
+		
+		int i = 1;
+		
+		for (Integer currentIndex : selectedMinimalShowList) {
+			System.out.println("(" + i + "):\t" + showList.get(currentIndex));
+			i++;
+		}
+		
+		for (Show currentShow : newShowList) {
+			if (currentShow.isSelected()) {
+				System.out.println("(" + i + "):\t" + currentShow);
+				i++;
+			}
+		}
+		
+//		System.out.println(newShowList);
 	}
 	
 }

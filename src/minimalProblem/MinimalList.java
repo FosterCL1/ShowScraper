@@ -37,6 +37,10 @@ public abstract class MinimalList {
 		return (thisList == null); 
 	}
 	
+	public Integer getIndex() {
+		return index;
+	}
+	
 	public Integer listSize() {
 		return thisList.size();
 	}
