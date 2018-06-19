@@ -100,7 +100,10 @@ public class GetSongList {
 	public static List<Song> getSongList(boolean bGetCovers) {
 		List<Song> songList = getOriginalsList();
 		
-		addCovers(songList);
+		if (bGetCovers) 
+		{
+			addCovers(songList);
+		}
 		
 		removeAliases(songList);
 		return songList;

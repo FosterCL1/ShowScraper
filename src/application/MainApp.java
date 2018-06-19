@@ -79,7 +79,7 @@ public class MainApp {
 	// TODO: Calculate this number
 	private static int maxSongsPerShow = 5;
 	private static int numSongsLeftToSelect;
-	private static boolean bGetCovers = true;
+	private static boolean bGetCovers = false;
 	private static long numShowsTested = 0;
 	
 	private static boolean getListsFromInternet(boolean bGetCovers) {
@@ -590,8 +590,8 @@ public class MainApp {
 //		}
 		
 		MinimalProblem minimalProblem = new MinimalProblem(correctedSongList, showList);
-		while (minimalProblem.step1_sortSongsByTimesPlayed(true) ) {
-			minimalProblem.step2_createSinglePlayedSongsList(true);
+		while (minimalProblem.step1_sortSongsByTimesPlayed(false) ) {
+			minimalProblem.step2_createSinglePlayedSongsList(false);
 			minimalProblem.step3_createSetOfShowsToRemove(false);
 			minimalProblem.step4_createSetOfAllSongsToRemove(false);
 			minimalProblem.step5_removeSongsFromSongList(false);
